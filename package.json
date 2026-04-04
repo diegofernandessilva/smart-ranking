@@ -1,0 +1,15 @@
+{
+  "name": "smart-ranking",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smart Ranking - Monorepo",
+  "scripts": {
+    "dev": "nf start",
+    "infra": "docker compose up -d",
+    "infra:stop": "docker compose down",
+    "install:all": "npm install && cd api-gateway && npm install && cd ../micro-admin-backend && npm install && cd ../micro-desafios && npm install && cd ../micro-notificacoes && npm install && cd ../micro-rankings && npm install"
+  },
+  "devDependencies": {
+    "foreman": "^3.0.1"
+  }
+}
