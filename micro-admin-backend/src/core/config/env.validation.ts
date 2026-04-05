@@ -3,7 +3,8 @@ import { z } from 'zod';
 export const envSchema = z.object({
   APP_PORT: z.coerce.number().default(3001),
   MONGODB_URL: z.string().url(),
-  RABBITMQ_URL: z.string(),
+  RABBITMQ_HOST: z.string().default('localhost'),
+  RABBITMQ_PORT: z.coerce.number().default(5672),
   RABBITMQ_USER: z.string().default('admin'),
   RABBITMQ_PASSWORD: z.string().default('admin'),
   RABBITMQ_VHOST: z.string().default('smartranking'),

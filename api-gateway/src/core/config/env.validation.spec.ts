@@ -5,7 +5,8 @@ describe('validateEnv', () => {
   const validEnv = {
     APP_PORT: '3000',
     MONGODB_URL: 'mongodb://localhost:27017/test',
-    RABBITMQ_URL: 'amqp://admin:admin@localhost:5672/smartranking',
+    RABBITMQ_HOST: 'localhost',
+    RABBITMQ_PORT: '5672',
     RABBITMQ_USER: 'admin',
     RABBITMQ_PASSWORD: 'admin',
     RABBITMQ_VHOST: 'smartranking',
@@ -17,9 +18,8 @@ describe('validateEnv', () => {
     expect(result).toBeDefined();
     expect(result.APP_PORT).toBe(3000);
     expect(result.MONGODB_URL).toBe('mongodb://localhost:27017/test');
-    expect(result.RABBITMQ_URL).toBe(
-      'amqp://admin:admin@localhost:5672/smartranking',
-    );
+    expect(result.RABBITMQ_HOST).toBe('localhost');
+    expect(result.RABBITMQ_PORT).toBe(5672);
   });
 
   it('should use default APP_PORT when not provided', () => {
@@ -56,11 +56,17 @@ describe('validateEnv', () => {
     ).toThrowError(/Environment validation failed/);
   });
 
-  it('should throw when RABBITMQ_URL is missing', () => {
-    const { RABBITMQ_URL: _, ...envWithoutRabbitmq } = validEnv;
+  it('should use default RABBITMQ_HOST when not provided', () => {
+    const { RABBITMQ_HOST: _, ...envWithoutHost } = validEnv;
+    const result = validateEnv(envWithoutHost);
 
-    expect(() => validateEnv(envWithoutRabbitmq)).toThrowError(
-      /Environment validation failed/,
-    );
+    expect(result.RABBITMQ_HOST).toBe('localhost');
+  });
+
+  it('should use default RABBITMQ_PORT when not provided', () => {
+    const { RABBITMQ_PORT: _, ...envWithoutPort } = validEnv;
+    const result = validateEnv(envWithoutPort);
+
+    expect(result.RABBITMQ_PORT).toBe(5672);
   });
 });

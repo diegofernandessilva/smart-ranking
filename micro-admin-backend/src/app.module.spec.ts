@@ -7,7 +7,6 @@ import { AppService } from './app.service';
 describe('AppModule', () => {
   beforeAll(() => {
     process.env.MONGODB_URL = 'mongodb://localhost:27017/test';
-    process.env.RABBITMQ_URL = 'amqp://admin:admin@localhost:5672/smartranking';
   });
 
   it('should compile the module', async () => {
