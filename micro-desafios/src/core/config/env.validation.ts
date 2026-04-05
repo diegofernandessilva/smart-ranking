@@ -8,6 +8,7 @@ export const envSchema = z.object({
   RABBITMQ_USER: z.string().default('admin'),
   RABBITMQ_PASSWORD: z.string().default('admin'),
   RABBITMQ_VHOST: z.string().default('smartranking'),
+  OUTBOX_BATCH_SIZE: z.coerce.number().default(10),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

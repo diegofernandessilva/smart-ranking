@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as amqp from 'amqp-connection-manager';
 import type { ConfirmChannel } from 'amqplib';
+import { buildRabbitMqUrl } from './rabbitmq-url.helper';
 
 export const TOPIC_EXCHANGE = 'smartranking.events';
 
@@ -22,12 +23,7 @@ export class RabbitMQQueueProvider
   constructor(private readonly configService: ConfigService) {
     super();
 
-    const rmqUser = this.configService.get<string>('RABBITMQ_USER');
-    const rmqPass = this.configService.get<string>('RABBITMQ_PASSWORD');
-    const rmqHost = this.configService.get<string>('RABBITMQ_HOST');
-    const rmqPort = this.configService.get<number>('RABBITMQ_PORT');
-    const rmqVhost = this.configService.get<string>('RABBITMQ_VHOST');
-    const rmqUrl = `amqp://${rmqUser}:${rmqPass}@${rmqHost}:${rmqPort}/${rmqVhost}`;
+    const rmqUrl = buildRabbitMqUrl(this.configService);
 
     this.connection = amqp.connect([rmqUrl]);
 

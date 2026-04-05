@@ -1,21 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
 import { AbstractOutboxRepository } from './outbox.repository';
 import { AbstractQueueProvider } from '../rabbitmq/rabbitmq-queue.provider';
 import { OutboxEventDocument } from './outbox-event.schema';
 
-const DEFAULT_BATCH_SIZE = 10;
-
 @Injectable()
 export class OutboxWorkerService {
   private readonly logger = new Logger(OutboxWorkerService.name);
-  private readonly batchSize = DEFAULT_BATCH_SIZE;
+  private readonly batchSize: number;
   private processing = false;
 
   constructor(
     private readonly outboxRepository: AbstractOutboxRepository,
     private readonly queueProvider: AbstractQueueProvider,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.batchSize = this.configService.get<number>('OUTBOX_BATCH_SIZE', 10);
+  }
 
   @Interval(5000)
   async processPendingEvents(): Promise<void> {

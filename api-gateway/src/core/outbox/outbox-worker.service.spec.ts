@@ -3,6 +3,7 @@ import { OutboxWorkerService } from './outbox-worker.service';
 import { AbstractOutboxRepository } from './outbox.repository';
 import { AbstractQueueProvider } from '../rabbitmq/rabbitmq-queue.provider';
 import { OutboxEventStatus } from './outbox-event.schema';
+import { ConfigService } from '@nestjs/config';
 
 function createMockEvent(overrides: Record<string, unknown> = {}) {
   return {
@@ -21,10 +22,25 @@ function createMockEvent(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function createMockConfigService(
+  overrides: Record<string, unknown> = {},
+): ConfigService {
+  const defaults: Record<string, unknown> = {
+    OUTBOX_BATCH_SIZE: 10,
+    ...overrides,
+  };
+  return {
+    get: vi.fn((key: string, defaultValue?: unknown) =>
+      key in defaults ? defaults[key] : defaultValue,
+    ),
+  } as unknown as ConfigService;
+}
+
 describe('OutboxWorkerService', () => {
   let worker: OutboxWorkerService;
   let outboxRepo: AbstractOutboxRepository;
   let queueProvider: AbstractQueueProvider;
+  let configService: ConfigService;
 
   beforeEach(() => {
     outboxRepo = {
@@ -40,7 +56,9 @@ describe('OutboxWorkerService', () => {
       send: vi.fn(),
     } as unknown as AbstractQueueProvider;
 
-    worker = new OutboxWorkerService(outboxRepo, queueProvider);
+    configService = createMockConfigService();
+
+    worker = new OutboxWorkerService(outboxRepo, queueProvider, configService);
   });
 
   it('should publish pending events and mark as PUBLISHED', async () => {
@@ -126,5 +144,20 @@ describe('OutboxWorkerService', () => {
     vi.mocked(outboxRepo.findPending).mockRejectedValue(new Error('DB connection error'));
 
     await expect(worker.processPendingEvents()).resolves.not.toThrow();
+  });
+
+  it('should use custom batch size from config', async () => {
+    const customConfigService = createMockConfigService({
+      OUTBOX_BATCH_SIZE: 25,
+    });
+    const customWorker = new OutboxWorkerService(
+      outboxRepo,
+      queueProvider,
+      customConfigService,
+    );
+
+    await customWorker.processPendingEvents();
+
+    expect(outboxRepo.findPending).toHaveBeenCalledWith(25);
   });
 });

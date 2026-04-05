@@ -5,17 +5,13 @@ import { AllExceptionsFilter } from './core/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './core/interceptors/logging.interceptor';
 import { TimeoutInterceptor } from './core/interceptors/timeout.interceptor';
 import { ConfigService } from '@nestjs/config';
+import { buildRabbitMqUrl } from './core/rabbitmq/rabbitmq-url.helper';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
-  const rmqUser = configService.get<string>('RABBITMQ_USER');
-  const rmqPass = configService.get<string>('RABBITMQ_PASSWORD');
-  const rmqHost = configService.get<string>('RABBITMQ_HOST');
-  const rmqPort = configService.get<number>('RABBITMQ_PORT');
-  const rmqVhost = configService.get<string>('RABBITMQ_VHOST');
-  const rmqUrl = `amqp://${rmqUser}:${rmqPass}@${rmqHost}:${rmqPort}/${rmqVhost}`;
+  const rmqUrl = buildRabbitMqUrl(configService);
 
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
