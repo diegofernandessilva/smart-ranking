@@ -22,6 +22,17 @@ export class Password {
     this._value = result.data;
   }
 
+  static fromHash(hash: string): Password {
+    const instance = Object.create(Password.prototype) as Password;
+    Object.defineProperty(instance, '_value', {
+      value: hash,
+      writable: false,
+      enumerable: true,
+      configurable: false,
+    });
+    return instance;
+  }
+
   get value(): string {
     return this._value;
   }

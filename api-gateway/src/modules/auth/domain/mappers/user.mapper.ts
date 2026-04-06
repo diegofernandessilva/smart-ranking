@@ -34,7 +34,7 @@ export class UserMapper {
       data._id,
       {
         email: new Email(data.email),
-        password: new Password(data.password),
+        password: Password.fromHash(data.password),
         name: data.name,
         phoneNumber: new PhoneNumber(data.phoneNumber),
         role: data.role as UserRole,

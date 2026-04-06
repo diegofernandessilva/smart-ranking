@@ -10,6 +10,8 @@ describe('validateEnv', () => {
     RABBITMQ_USER: 'admin',
     RABBITMQ_PASSWORD: 'admin',
     RABBITMQ_VHOST: 'smartranking',
+    JWT_PRIVATE_KEY: 'test-private-key',
+    JWT_PUBLIC_KEY: 'test-public-key',
   };
 
   it('should validate correct env vars', () => {
