@@ -147,6 +147,34 @@ describe('MongooseUserRepository', () => {
     });
   });
 
+  describe('findByResetToken', () => {
+    it('should return entity when token found', async () => {
+      mockModel.findOne.mockReturnValue({
+        exec: vi.fn().mockResolvedValue(
+          createMockDoc({ passwordResetToken: 'hashed-token' }),
+        ),
+      });
+
+      const result = await repository.findByResetToken('hashed-token');
+
+      expect(result).toBeInstanceOf(UserEntity);
+      expect(mockModel.findOne).toHaveBeenCalledWith({
+        passwordResetToken: 'hashed-token',
+        deletedAt: null,
+      });
+    });
+
+    it('should return null when token not found', async () => {
+      mockModel.findOne.mockReturnValue({
+        exec: vi.fn().mockResolvedValue(null),
+      });
+
+      const result = await repository.findByResetToken('nonexistent');
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('softDelete', () => {
     it('should set deletedAt on the document', async () => {
       mockModel.updateOne.mockReturnValue({

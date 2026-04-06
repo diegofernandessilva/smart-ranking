@@ -9,5 +9,8 @@ export abstract class AbstractUserRepository {
     id: string,
     data: Partial<IUserProps>,
   ): Promise<UserEntity>;
+  abstract findByResetToken(
+    tokenHash: string,
+  ): Promise<UserEntity | null>;
   abstract softDelete(id: string): Promise<void>;
 }

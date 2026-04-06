@@ -17,6 +17,7 @@ const mockUserRepository: Record<keyof AbstractUserRepository, ReturnType<typeof
   create: vi.fn(),
   findByEmail: vi.fn(),
   findById: vi.fn(),
+  findByResetToken: vi.fn(),
   update: vi.fn(),
   softDelete: vi.fn(),
 };

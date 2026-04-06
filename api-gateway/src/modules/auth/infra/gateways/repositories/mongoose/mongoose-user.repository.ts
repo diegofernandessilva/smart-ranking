@@ -155,6 +155,33 @@ export class MongooseUserRepository extends AbstractUserRepository {
     });
   }
 
+  async findByResetToken(tokenHash: string): Promise<UserEntity | null> {
+    const doc = await this.userModel
+      .findOne({
+        passwordResetToken: tokenHash,
+        deletedAt: null,
+      })
+      .exec();
+    if (!doc) return null;
+    return UserMapper.toEntity({
+      _id: doc._id.toString(),
+      email: doc.email,
+      password: doc.password,
+      name: doc.name,
+      phoneNumber: doc.phoneNumber,
+      role: doc.role,
+      isActive: doc.isActive,
+      failedLoginAttempts: doc.failedLoginAttempts,
+      lockedUntil: doc.lockedUntil,
+      passwordResetToken: doc.passwordResetToken,
+      passwordResetExpires: doc.passwordResetExpires,
+      lastPasswordChange: doc.lastPasswordChange,
+      deletedAt: doc.deletedAt,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+    });
+  }
+
   async softDelete(id: string): Promise<void> {
     await this.userModel
       .updateOne({ _id: id, deletedAt: null }, { deletedAt: new Date() })
