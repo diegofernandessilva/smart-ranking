@@ -132,7 +132,7 @@ describe('MongooseUserRepository', () => {
       expect(mockModel.findOneAndUpdate).toHaveBeenCalledWith(
         { _id: 'user-id-123', deletedAt: null },
         { failedLoginAttempts: 3 },
-        { new: true },
+        { returnDocument: 'after' },
       );
     });
 

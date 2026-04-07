@@ -128,7 +128,7 @@ export class MongooseUserRepository extends AbstractUserRepository {
 
     const doc = await this.userModel
       .findOneAndUpdate({ _id: id, deletedAt: null }, updateData, {
-        new: true,
+        returnDocument: 'after',
       })
       .exec();
 

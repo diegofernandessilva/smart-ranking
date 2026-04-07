@@ -1,0 +1,532 @@
+{
+  "info": {
+    "name": "Smart Ranking - Auth Module",
+    "description": "Collection para UAT do Auth Module (api-gateway).\n\n## Fluxo sugerido de teste\n1. Register\n2. Login (salva accessToken automaticamente + cookie refreshToken)\n3. Me (usa accessToken)\n4. Refresh (usa cookie)\n5. Change Password\n6. Logout (limpa cookie)\n7. Forgot Password\n8. Reset Password (precisa do token do e-mail/DB)\n\n## Nota sobre cookies\nO cookie `refreshToken` tem flag `secure: true`. Para testes locais via HTTP, ajuste temporariamente para `secure: false` no controller, ou use HTTPS local. O Postman gerencia cookies automaticamente via cookie jar.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Register",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{userName}}\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"phoneNumber\": \"{{userPhone}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "register"]
+        },
+        "description": "Cria novo usuário (role PLAYER por padrão).\n\nValidações:\n- name: min 2 chars\n- email: formato válido\n- password: min 8 chars\n- phoneNumber: formato BR\n\nRetorna: { user: { id, name, email, role } }"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 201 Created', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Response has user object', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.user).to.have.property('id');",
+              "    pm.expect(json.user).to.have.property('name');",
+              "    pm.expect(json.user).to.have.property('email');",
+              "    pm.expect(json.user).to.have.property('role');",
+              "    pm.expect(json.user.role).to.eql('PLAYER');",
+              "});",
+              "",
+              "pm.test('No sensitive fields leaked', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.user).to.not.have.property('password');",
+              "    pm.expect(json.user).to.not.have.property('passwordResetToken');",
+              "    pm.expect(json.user).to.not.have.property('failedLoginAttempts');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "login"]
+        },
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "Autentica usuário.\n\nRetorna: { accessToken, user: { id, name, email, role } }\nCookie: refreshToken (HttpOnly, Secure, SameSite=Strict, Path=/api/v1/auth, 7d)"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has accessToken', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('accessToken');",
+              "    pm.expect(json.accessToken).to.be.a('string').and.not.empty;",
+              "});",
+              "",
+              "pm.test('Response has user object', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.user).to.have.property('id');",
+              "    pm.expect(json.user).to.have.property('email');",
+              "    pm.expect(json.user).to.have.property('role');",
+              "});",
+              "",
+              "// Auto-save accessToken to environment",
+              "const json = pm.response.json();",
+              "if (json.accessToken) {",
+              "    pm.environment.set('accessToken', json.accessToken);",
+              "    console.log('accessToken saved to environment');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Me",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/me",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "me"]
+        },
+        "description": "Retorna dados do usuário autenticado.\nRequer: Bearer token (Authorization header).\n\nRetorna: { id, name, email, phoneNumber, role, createdAt }"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has user profile fields', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.expect(json).to.have.property('name');",
+              "    pm.expect(json).to.have.property('email');",
+              "    pm.expect(json).to.have.property('phoneNumber');",
+              "    pm.expect(json).to.have.property('role');",
+              "    pm.expect(json).to.have.property('createdAt');",
+              "});",
+              "",
+              "pm.test('No sensitive fields leaked', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.not.have.property('password');",
+              "    pm.expect(json).to.not.have.property('isActive');",
+              "    pm.expect(json).to.not.have.property('failedLoginAttempts');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Refresh Token",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/refresh",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "refresh"]
+        },
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "Renova accessToken usando o cookie refreshToken.\nNao requer Authorization header.\n\nCookie refreshToken enviado automaticamente pelo Postman (cookie jar).\n\nRetorna: { accessToken }\nAtualiza o cookie refreshToken (rotation).\n\nSe nao houver cookie, retorna { accessToken: '' } (graceful degradation)."
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has accessToken', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('accessToken');",
+              "});",
+              "",
+              "// Auto-save new accessToken if not empty",
+              "const json = pm.response.json();",
+              "if (json.accessToken) {",
+              "    pm.environment.set('accessToken', json.accessToken);",
+              "    console.log('accessToken refreshed and saved');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Change Password",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"{{userPassword}}\",\n  \"newPassword\": \"N3wStr0ng@Pass!\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/change-password",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "change-password"]
+        },
+        "description": "Altera senha do usuário autenticado.\nRequer: Bearer token.\n\nValidações:\n- currentPassword: obrigatório\n- newPassword: min 8 chars, diferente da atual\n\nRetorna: { message: 'Password changed successfully' }\nRevoga todos os refresh tokens (força re-login em outros devices)."
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has success message', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.message).to.eql('Password changed successfully');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Logout",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/logout",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "logout"]
+        },
+        "description": "Desloga o usuário.\nRequer: Bearer token.\n\nRevoga o refresh token no DB e limpa o cookie.\nSe nao houver cookie, apenas limpa (graceful).\n\nRetorna: { message: 'Logged out successfully' }"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has success message', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.message).to.eql('Logged out successfully');",
+              "});",
+              "",
+              "// Clear accessToken from environment after logout",
+              "pm.environment.set('accessToken', '');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Forgot Password",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{userEmail}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/forgot-password",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "forgot-password"]
+        },
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "Solicita reset de senha.\nSempre retorna 200 mesmo que o e-mail nao exista (RN-047: previne enumeracao).\n\nRetorna: { message: 'If this email exists, a reset link has been sent' }\n\nPara testar o reset-password, busque o token no MongoDB:\ndb.users.findOne({ email: '...' }, { passwordResetToken: 1 })\n\nNota: o token armazenado no DB é o SHA-256 hash. O token raw foi enviado por e-mail (LocalStack SES)."
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has generic message (no enumeration)', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.message).to.eql('If this email exists, a reset link has been sent');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Reset Password",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"newPassword\": \"R3set@NewPass!\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/reset-password",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "reset-password"]
+        },
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "Reseta a senha usando o token recebido por e-mail.\n\nO token raw deve ser o que foi enviado por e-mail (nao o hash do DB).\nO use case faz SHA-256 do token para buscar no DB.\n\nValidações:\n- token: obrigatório\n- newPassword: min 8 chars\n\nRetorna: { message: 'Password reset successfully' }\nRevoga todos os refresh tokens."
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has success message', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.message).to.eql('Password reset successfully');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "--- Error Cases ---",
+      "item": [
+        {
+          "name": "Register - Email duplicado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{userName}}\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"phoneNumber\": \"{{userPhone}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Tenta registrar com e-mail que ja existe. Deve retornar 409 Conflict."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Senha errada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"WrongPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Login com senha incorreta. Deve retornar 401 Unauthorized."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me - Sem token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Acessa /me sem Authorization header. Deve retornar 401."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - Validacao (body vazio)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Envia body vazio no register. Deve retornar 400 com erros de validacao."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
